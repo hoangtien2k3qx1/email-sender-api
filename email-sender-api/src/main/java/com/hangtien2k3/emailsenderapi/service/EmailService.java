@@ -4,81 +4,57 @@ import org.springframework.stereotype.Service;
 
 import java.util.Properties;
 
-import javax.mail.Authenticator;
-import javax.mail.Message;
-import javax.mail.PasswordAuthentication;
-import javax.mail.Session;
-import javax.mail.Transport;
+import javax.mail.*;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 
 @Service
 public class EmailService {
+    private static final String FROM_EMAIL = "taocaygithub@gmail.com";
+    private static final String HOST = "smtp.gmail.com";
+    private static final int SMTP_PORT = 465;
 
-    //this is responsible to send email..
-    public boolean sendEmail(String message, String subject, String to) {
+    private Properties getMailProperties() {
+        Properties properties = new Properties();
+        properties.put("mail.smtp.host", HOST);
+        properties.put("mail.smtp.port", String.valueOf(SMTP_PORT));
+        properties.put("mail.smtp.ssl.enable", "true");
+        properties.put("mail.smtp.auth", "true");
+        return properties;
+    }
 
-        boolean f = false;
-
-        String from = "taocaygithub@gmail.com";
-
-        //Variable for gmail
-        String host = "smtp.gmail.com";
-
-        //get the system properties
-        Properties properties = System.getProperties();
-        System.out.println("PROPERTIES "+properties);
-
-        //setting important information to properties object
-
-        //host set
-        properties.put("mail.smtp.host", host);
-        properties.put("mail.smtp.port","465");
-        properties.put("mail.smtp.ssl.enable","true");
-        properties.put("mail.smtp.auth","true");
-
-        //Step 1: to get the session object..
-        Session session=Session.getInstance(properties, new Authenticator() {
+    private Session getSession() {
+        return Session.getInstance(getMailProperties(), new Authenticator() {
             @Override
             protected PasswordAuthentication getPasswordAuthentication() {
-                return new PasswordAuthentication("taocaygithub@gmail.com", "*****");
+                return new PasswordAuthentication(FROM_EMAIL, "*****"); // Replace with your password
             }
         });
+    }
 
-        session.setDebug(true);
+    private MimeMessage createMimeMessage(Session session, String to, String subject, String message) throws MessagingException {
+        MimeMessage mimeMessage = new MimeMessage(session);
+        mimeMessage.setFrom(new InternetAddress(FROM_EMAIL));
+        mimeMessage.addRecipient(Message.RecipientType.TO, new InternetAddress(to));
+        mimeMessage.setSubject(subject);
+        mimeMessage.setText(message);
+        return mimeMessage;
+    }
 
-        //Step 2 : compose the message [text,multi media]
-        MimeMessage m = new MimeMessage(session);
+    public boolean sendEmail(String message, String subject, String to) {
+        boolean isSent = false;
+        Session session = getSession();
 
         try {
-
-            //from email
-            m.setFrom(from);
-
-            //adding recipient to message
-            m.addRecipient(Message.RecipientType.TO, new InternetAddress(to));
-
-            //adding subject to message
-            m.setSubject(subject);
-
-
-            //adding text to message
-            m.setText(message);
-
-            //send
-
-            //Step 3 : send the message using Transport class
-            Transport.send(m);
-
-            System.out.println("Sent success...................");
-
-            f = true;
-
-        }catch (Exception e) {
+            MimeMessage mimeMessage = createMimeMessage(session, to, subject, message);
+            Transport.send(mimeMessage);
+            System.out.println("Email sent successfully...");
+            isSent = true;
+        } catch (MessagingException e) {
             e.printStackTrace();
         }
 
-        return f;
+        return isSent;
     }
-
 }
+
